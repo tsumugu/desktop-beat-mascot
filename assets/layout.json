@@ -1,0 +1,265 @@
+{
+  "canvas": [
+    2048,
+    2048
+  ],
+  "reference": "assets/reference.png",
+  "parts": [
+    {
+      "name": "back_hair",
+      "index": 1,
+      "file": "part_01.png",
+      "cx": 1074,
+      "cy": 777,
+      "scale": 4,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "z": 0,
+      "visible": true
+    },
+    {
+      "name": "bun",
+      "index": 3,
+      "file": "part_03.png",
+      "cx": 583,
+      "cy": 748,
+      "scale": 3.44,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.6657,
+        0.4262
+      ],
+      "z": 1,
+      "visible": true
+    },
+    {
+      "name": "part_25",
+      "index": 25,
+      "file": "part_25.png",
+      "cx": 1053,
+      "cy": 1226,
+      "scale": 0.68,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "z": 2,
+      "visible": true
+    },
+    {
+      "name": "neck_chest",
+      "index": 13,
+      "file": "part_13.png",
+      "cx": 1052,
+      "cy": 1337,
+      "scale": 5.29,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "z": 3,
+      "visible": true
+    },
+    {
+      "name": "part_24",
+      "index": 24,
+      "file": "part_24.png",
+      "cx": 1045,
+      "cy": 1756,
+      "scale": 0.75,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "z": 4,
+      "visible": true
+    },
+    {
+      "name": "part_29",
+      "index": 29,
+      "file": "part_29.png",
+      "cx": 1337,
+      "cy": 922,
+      "scale": 0.57,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.0583,
+        0.5437
+      ],
+      "z": 5,
+      "visible": true
+    },
+    {
+      "name": "part_27",
+      "index": 27,
+      "file": "part_27.png",
+      "cx": 749,
+      "cy": 922,
+      "scale": 0.57,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        1.0462,
+        0.6336
+      ],
+      "z": 6,
+      "visible": true
+    },
+    {
+      "name": "face",
+      "index": 2,
+      "file": "part_02.png",
+      "cx": 1046,
+      "cy": 707,
+      "scale": 3.6,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5024,
+        0.4688
+      ],
+      "z": 7,
+      "visible": true
+    },
+    {
+      "name": "arm_r",
+      "index": 21,
+      "file": "part_21.png",
+      "cx": 1657,
+      "cy": 1498,
+      "scale": 4,
+      "rot": 5,
+      "flip": false,
+      "pivot": [
+        0.2147,
+        0.0145
+      ],
+      "z": 8,
+      "visible": true
+    },
+    {
+      "name": "arm_l",
+      "index": 20,
+      "file": "part_20.png",
+      "cx": 444,
+      "cy": 1507,
+      "scale": 4,
+      "rot": -5,
+      "flip": false,
+      "pivot": [
+        0.7861,
+        0.0144
+      ],
+      "z": 9,
+      "visible": true
+    },
+    {
+      "name": "cardigan",
+      "index": 19,
+      "file": "part_19.png",
+      "cx": 1057,
+      "cy": 2067,
+      "scale": 4.07,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "z": 10,
+      "visible": true
+    },
+    {
+      "name": "yellow_bow",
+      "index": 22,
+      "file": "part_22.png",
+      "cx": 1042,
+      "cy": 1682,
+      "scale": 3.51,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "z": 11,
+      "visible": true
+    },
+    {
+      "name": "part_32",
+      "index": 32,
+      "file": "part_32.png",
+      "cx": 1037,
+      "cy": 635,
+      "scale": 0.39,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5335,
+        0.0491
+      ],
+      "z": 12,
+      "visible": true
+    },
+    {
+      "name": "part_28",
+      "index": 28,
+      "file": "part_28.png",
+      "cx": 1040,
+      "cy": 687,
+      "scale": 0.47,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        1.3402,
+        1.6556
+      ],
+      "z": 13,
+      "visible": true
+    },
+    {
+      "name": "part_30",
+      "index": 30,
+      "file": "part_30.png",
+      "cx": 1049,
+      "cy": 687,
+      "scale": 0.47,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        -0.379,
+        1.7465
+      ],
+      "z": 14,
+      "visible": true
+    },
+    {
+      "name": "bangs",
+      "index": 0,
+      "file": "part_00.png",
+      "cx": 1048,
+      "cy": 758,
+      "scale": 4.09,
+      "rot": 0,
+      "flip": false,
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "z": 15,
+      "visible": true
+    }
+  ]
+}

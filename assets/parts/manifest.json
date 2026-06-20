@@ -1,0 +1,482 @@
+[
+  {
+    "index": 0,
+    "file": "part_00.png",
+    "bbox": [
+      478,
+      33,
+      268,
+      333
+    ],
+    "center": [
+      612,
+      199
+    ],
+    "area": 41662,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 1,
+    "file": "part_01.png",
+    "bbox": [
+      785,
+      39,
+      240,
+      322
+    ],
+    "center": [
+      905,
+      200
+    ],
+    "area": 62728,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 2,
+    "file": "part_02.png",
+    "bbox": [
+      226,
+      41,
+      214,
+      286
+    ],
+    "center": [
+      333,
+      184
+    ],
+    "area": 45080,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 3,
+    "file": "part_03.png",
+    "bbox": [
+      1062,
+      49,
+      111,
+      163
+    ],
+    "center": [
+      1117,
+      130
+    ],
+    "area": 10203,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 4,
+    "file": "part_04.png",
+    "bbox": [
+      231,
+      329,
+      200,
+      204
+    ],
+    "center": [
+      331,
+      431
+    ],
+    "area": 23424,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 5,
+    "file": "part_05.png",
+    "bbox": [
+      505,
+      390,
+      95,
+      76
+    ],
+    "center": [
+      552,
+      428
+    ],
+    "area": 4238,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 6,
+    "file": "part_06.png",
+    "bbox": [
+      656,
+      391,
+      94,
+      75
+    ],
+    "center": [
+      703,
+      428
+    ],
+    "area": 4202,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 7,
+    "file": "part_07.png",
+    "bbox": [
+      806,
+      404,
+      127,
+      68
+    ],
+    "center": [
+      869,
+      438
+    ],
+    "area": 5836,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 8,
+    "file": "part_08.png",
+    "bbox": [
+      997,
+      408,
+      120,
+      64
+    ],
+    "center": [
+      1057,
+      440
+    ],
+    "area": 5114,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 9,
+    "file": "part_09.png",
+    "bbox": [
+      808,
+      568,
+      101,
+      52
+    ],
+    "center": [
+      858,
+      594
+    ],
+    "area": 3110,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 10,
+    "file": "part_10.png",
+    "bbox": [
+      287,
+      569,
+      96,
+      56
+    ],
+    "center": [
+      335,
+      597
+    ],
+    "area": 2942,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 11,
+    "file": "part_11.png",
+    "bbox": [
+      1025,
+      570,
+      92,
+      56
+    ],
+    "center": [
+      1071,
+      598
+    ],
+    "area": 2880,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 12,
+    "file": "part_12.png",
+    "bbox": [
+      778,
+      649,
+      153,
+      160
+    ],
+    "center": [
+      854,
+      729
+    ],
+    "area": 15823,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 13,
+    "file": "part_13.png",
+    "bbox": [
+      263,
+      658,
+      152,
+      145
+    ],
+    "center": [
+      339,
+      730
+    ],
+    "area": 12061,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 14,
+    "file": "part_14.png",
+    "bbox": [
+      1019,
+      676,
+      100,
+      34
+    ],
+    "center": [
+      1069,
+      693
+    ],
+    "area": 1361,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 15,
+    "file": "part_15.png",
+    "bbox": [
+      556,
+      684,
+      132,
+      49
+    ],
+    "center": [
+      622,
+      708
+    ],
+    "area": 2845,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 16,
+    "file": "part_16.png",
+    "bbox": [
+      481,
+      729,
+      80,
+      92
+    ],
+    "center": [
+      521,
+      775
+    ],
+    "area": 2818,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 17,
+    "file": "part_17.png",
+    "bbox": [
+      650,
+      729,
+      79,
+      92
+    ],
+    "center": [
+      689,
+      775
+    ],
+    "area": 2818,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 18,
+    "file": "part_18.png",
+    "bbox": [
+      1017,
+      751,
+      93,
+      90
+    ],
+    "center": [
+      1063,
+      796
+    ],
+    "area": 5485,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 19,
+    "file": "part_19.png",
+    "bbox": [
+      446,
+      832,
+      329,
+      358
+    ],
+    "center": [
+      610,
+      1011
+    ],
+    "area": 94905,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 20,
+    "file": "part_20.png",
+    "bbox": [
+      208,
+      850,
+      175,
+      330
+    ],
+    "center": [
+      295,
+      1015
+    ],
+    "area": 23128,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 21,
+    "file": "part_21.png",
+    "bbox": [
+      822,
+      850,
+      174,
+      328
+    ],
+    "center": [
+      909,
+      1014
+    ],
+    "area": 23096,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 22,
+    "file": "part_22.png",
+    "bbox": [
+      985,
+      886,
+      170,
+      123
+    ],
+    "center": [
+      1070,
+      947
+    ],
+    "area": 11399,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  },
+  {
+    "index": 23,
+    "file": "part_23.png",
+    "bbox": [
+      1017,
+      1041,
+      110,
+      109
+    ],
+    "center": [
+      1072,
+      1095
+    ],
+    "area": 6429,
+    "sheet_size": [
+      1254,
+      1254
+    ],
+    "name": null
+  }
+]

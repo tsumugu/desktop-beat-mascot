@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>Mascot Layout Editor</title>
+<style>
+  :root { --bg:#1e1f26; --panel:#272833; --line:#3a3c4a; --txt:#e8e8ef; --accent:#5b8cff; --muted:#9aa0b4; --danger:#ff5b6e; }
+  * { box-sizing: border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,system-ui,sans-serif; font-size:13px; overflow:hidden; }
+  #app { display:flex; height:100vh; }
+  #stageWrap { flex:1; position:relative; overflow:hidden; background:
+    repeating-conic-gradient(#2a2b34 0% 25%, #23242c 0% 50%) 50%/24px 24px; }
+  #stage { position:absolute; inset:0; cursor:grab; }
+  #stage.dragging { cursor:grabbing; }
+  #panel { width:308px; background:var(--panel); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; overflow-y:auto; }
+  .sec { padding:10px 12px; border-bottom:1px solid var(--line); }
+  .sec h3 { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+    display:flex; justify-content:space-between; align-items:center; }
+  .row { display:flex; align-items:center; gap:6px; margin:4px 0; }
+  .row label { width:64px; color:var(--muted); }
+  input[type=number],input[type=text] { width:70px; background:#1b1c22; color:var(--txt); border:1px solid var(--line);
+    border-radius:5px; padding:3px 5px; font-size:12px; }
+  input#pname { width:100%; }
+  input[type=range] { flex:1; }
+  button { background:#33354a; color:var(--txt); border:1px solid var(--line); border-radius:6px;
+    padding:5px 9px; cursor:pointer; font-size:12px; }
+  button:hover { background:#3d4060; }
+  button.primary { background:var(--accent); border-color:var(--accent); }
+  button.mini { padding:2px 7px; font-size:11px; }
+  .btns { display:flex; gap:6px; flex-wrap:wrap; }
+  #layers { display:flex; flex-direction:column; gap:2px; max-height:30vh; overflow-y:auto; }
+  .layer { display:flex; align-items:center; gap:5px; padding:4px 6px; border-radius:5px; cursor:pointer; }
+  .layer:hover { background:#2f3140; }
+  .layer.sel { background:#384a7a; }
+  .layer .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .layer .ord { display:flex; flex-direction:column; }
+  .layer .ord button { padding:0 4px; font-size:9px; line-height:11px; }
+  .layer .del { color:var(--danger); padding:1px 5px; }
+  .eye { width:18px; text-align:center; opacity:.5; cursor:pointer; }
+  .eye.on { opacity:1; }
+  #library { display:none; grid-template-columns:repeat(4,1fr); gap:5px; max-height:32vh; overflow-y:auto; margin-top:6px; }
+  #library.open { display:grid; }
+  .lib { position:relative; border:1px solid var(--line); border-radius:6px; padding:3px; cursor:pointer;
+    background:repeating-conic-gradient(#3a3b44 0% 25%, #303139 0% 50%) 50%/10px 10px; height:56px;
+    display:flex; align-items:center; justify-content:center; }
+  .lib:hover { border-color:var(--accent); }
+  .lib img { max-width:100%; max-height:46px; }
+  .lib span { position:absolute; left:2px; bottom:1px; font-size:9px; background:rgba(0,0,0,.6); padding:0 3px; border-radius:3px; }
+  #hud { position:absolute; left:8px; top:8px; background:rgba(0,0,0,.55); padding:4px 8px;
+    border-radius:6px; font-variant-numeric:tabular-nums; pointer-events:none; }
+  textarea { width:100%; height:80px; background:#1b1c22; color:#cfd3e6; border:1px solid var(--line);
+    border-radius:5px; font-family:ui-monospace,monospace; font-size:11px; }
+  .hint { color:var(--muted); font-size:11px; line-height:1.5; }
+  .chk { display:flex; align-items:center; gap:6px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stageWrap">
+    <canvas id="stage"></canvas>
+    <div id="hud">—</div>
+  </div>
+  <div id="panel">
+    <div class="sec">
+      <h3>アニメーション</h3>
+      <div class="btns">
+        <button id="playBtn">▶ 再生</button>
+        <span style="color:var(--muted);font-size:11px" id="playStatus">停止中 — 120BPM固定</span>
+      </div>
+      <div class="hint" style="margin-top:4px">再生中に pivot を調整できます。</div>
+    </div>
+
+    <div class="sec">
+      <h3>表示</h3>
+      <div class="row"><span class="chk"><input type="checkbox" id="refOn" checked> 元絵を表示</span></div>
+      <div class="row"><label>不透明度</label><input type="range" id="refOpacity" min="0" max="100" value="55"></div>
+      <div class="btns"><button id="fitBtn">画面に合わせる</button><button id="zoom100">100%</button></div>
+      <div class="row"><label>ズーム</label><input type="range" id="zoom" min="5" max="200" value="40"><span id="zoomv">40%</span></div>
+    </div>
+
+    <div class="sec">
+      <h3>パーツ追加 <button class="mini" id="libToggle">ライブラリ ▾</button></h3>
+      <div class="hint">サムネをクリックでレイヤーとして追加。<br>partsディレクトリの画像を読み込みます。</div>
+      <div id="library"></div>
+    </div>
+
+    <div class="sec">
+      <h3>レイヤー（上=手前）</h3>
+      <div id="layers"></div>
+    </div>
+
+    <div class="sec" id="propSec">
+      <h3>選択中のパーツ</h3>
+      <div class="row"><label>名前</label><input type="text" id="pname" placeholder="（パーツを選択）"></div>
+      <div class="row"><label>X</label><input type="number" id="px" step="1"><label style="width:auto">Y</label><input type="number" id="py" step="1"></div>
+      <div class="row"><label>スケール</label><input type="number" id="pscale" step="0.01"><input type="range" id="pscaleR" min="10" max="400" value="200"></div>
+      <div class="row"><label>回転°</label><input type="number" id="prot" step="0.5"><input type="range" id="protR" min="-180" max="180" value="0"></div>
+      <div class="row"><span class="chk"><input type="checkbox" id="pflip"> 左右反転</span>
+        <span class="chk" style="margin-left:10px"><input type="checkbox" id="pvis" checked> 表示</span></div>
+      <div class="row"><label>軸 X/Y</label><input type="number" id="ppx" step="0.01" min="0" max="1"><input type="number" id="ppy" step="0.01" min="0" max="1"></div>
+      <div class="btns"><button id="setPivot">軸を指定（クリック）</button>
+        <button id="dupBtn">複製</button>
+        <button id="delBtn" style="color:var(--danger)">削除</button></div>
+      <div class="hint" style="margin-top:6px">矢印=1px / Shift+矢印=10px。ホイール=ズーム。空白ドラッグ=パン。Delete/Backspace=削除。</div>
+    </div>
+
+    <div class="sec">
+      <h3>保存 / 読み込み</h3>
+      <div class="btns">
+        <button class="primary" id="exportBtn">layout.json を保存</button>
+        <button id="copyBtn">コピー</button>
+        <button onclick="document.getElementById('importFile').click()">読み込み</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+        <button id="resetBtn">初期配置</button>
+      </div>
+      <textarea id="jsonOut" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const PARTS_DIR = '../assets/parts/';
+const REF_SRC = '../assets/reference.png';
+let WORLD_W = 2048, WORLD_H = 2048;
+
+// 初期配置シード（2048空間）。これらは起動時にレイヤーとして配置される。
+const SEED = {
+  1:{n:'back_hair', x:1024,y:840, z:1},  3:{n:'bun',     x:1147,y:512, z:2},
+  4:{n:'neck',      x:1024,y:1229,z:3},  19:{n:'cardigan',x:1024,y:1720,z:4},
+  20:{n:'arm_l',    x:696, y:1751,z:5},  21:{n:'arm_r',  x:1352,y:1751,z:6},
+  2:{n:'face',      x:1024,y:819, z:7},  16:{n:'collar_l',x:942, y:1465,z:8},
+  17:{n:'collar_r', x:1106,y:1465,z:9},  22:{n:'yellow_bow',x:1024,y:1526,z:10},
+  5:{n:'eye_l',     x:926, y:866, z:11}, 6:{n:'eye_r',   x:1122,y:866, z:12},
+  15:{n:'mouth',    x:1024,y:1004,z:13}, 0:{n:'bangs',   x:1024,y:811, z:14},
+};
+const NAMES = { ...Object.fromEntries(Object.entries(SEED).map(([i,v])=>[i,v.n])),
+  7:'eye_l_alt',8:'eye_r_alt',9:'eyelid_a',10:'eyelid_l',11:'eyelid_r',
+  12:'mouth_open',13:'neck_chest',14:'eyelid_line',18:'tongue',23:'red_ribbon' };
+const DEFAULT_SCALE = 2.048;
+const nameFor = i => NAMES[i] || ('part_'+i);
+
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+let library = [];      // {srcIndex,file,name,img,off}
+let layers = [];       // {id,srcIndex,name,x,y,scale,rot,flip,visible,pivot,z}
+let sel = null;
+let refImg = null;
+let nextId = 1;
+const view = { scale: 0.40, x: 0, y: 0 };
+let pivotMode = false;
+const libBySrc = i => library.find(l=>l.srcIndex===i) || library[0];
+
+function resize(){ canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; render(); }
+window.addEventListener('resize', resize);
+function w2s(x,y){ return [x*view.scale+view.x, y*view.scale+view.y]; }
+function s2w(x,y){ return [(x-view.x)/view.scale, (y-view.y)/view.scale]; }
+function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+function offscreen(img){ const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+  c.getContext('2d').drawImage(img,0,0); return c.getContext('2d'); }
+const $=id=>document.getElementById(id);
+
+// ---- boot ----
+async function loadLibrary(){
+  let files=[];
+  try { const html=await (await fetch(PARTS_DIR)).text();
+    files=[...html.matchAll(/href="([^"]+?\.png)"/gi)].map(m=>m[1].split('/').pop()); } catch(e){}
+  files=files.filter(f=>/part_\d+\.png/i.test(f));
+  if(!files.length){ try{ const man=await (await fetch(PARTS_DIR+'manifest.json')).json(); files=man.map(m=>m.file); }catch(e){} }
+  if(!files.length) files=Array.from({length:24},(_,i)=>`part_${String(i).padStart(2,'0')}.png`);
+  files=[...new Set(files)].sort((a,b)=>(+(a.match(/\d+/)||0))-(+(b.match(/\d+/)||0)));
+  library=[];
+  for(const f of files){ const idx=+(f.match(/\d+/)||[library.length])[0];
+    const img=await loadImg(PARTS_DIR+f); library.push({srcIndex:idx,file:f,name:nameFor(idx),img,off:offscreen(img)}); }
+}
+function buildLibrary(){
+  const box=$('library'); box.innerHTML='';
+  for(const l of library){ const d=document.createElement('div'); d.className='lib'; d.title=l.file;
+    d.innerHTML=`<img src="${PARTS_DIR+l.file}"><span>#${l.srcIndex}</span>`;
+    d.onclick=()=>addLayer(l.srcIndex); box.appendChild(d); }
+}
+async function boot(){
+  try { refImg=await loadImg(REF_SRC); WORLD_W=refImg.naturalWidth; WORLD_H=refImg.naturalHeight; } catch(e){ console.warn('ref load fail',e); }
+  if(!library.length) await loadLibrary();
+  buildLibrary();
+  layers=[]; sel=null; nextId=1;
+  for(const [idx,s] of Object.entries(SEED)){
+    layers.push(makeLayer(+idx,{x:s.x,y:s.y,z:s.z,name:s.n,visible:true})); }
+  layers.sort((a,b)=>a.z-b.z).forEach((l,i)=>l.z=i);
+  resize(); fitView(); buildLayers();
+}
+function makeLayer(srcIndex,opt={}){
+  return { id:nextId++, srcIndex, name:opt.name||nameFor(srcIndex),
+    x:opt.x??WORLD_W/2, y:opt.y??WORLD_H/2, scale:opt.scale??DEFAULT_SCALE,
+    rot:opt.rot??0, flip:opt.flip??false, visible:opt.visible??true,
+    pivot:opt.pivot??[0.5,0.5], z:opt.z??layers.length };
+}
+function addLayer(srcIndex){
+  const [cx,cy]=s2w(canvas.width/2,canvas.height/2);
+  const maxz=layers.reduce((m,l)=>Math.max(m,l.z),-1);
+  const L=makeLayer(srcIndex,{x:Math.round(cx),y:Math.round(cy),z:maxz+1});
+  layers.push(L); select(L); buildLayers(); render();
+}
+function deleteLayer(L){
+  layers=layers.filter(x=>x!==L); if(sel===L) sel=null;
+  layers.sort((a,b)=>a.z-b.z).forEach((l,i)=>l.z=i);
+  buildLayers(); syncProps(); render();
+}
+function dupLayer(L){
+  const c=makeLayer(L.srcIndex,{x:L.x+30,y:L.y+30,scale:L.scale,rot:L.rot,flip:L.flip,
+    visible:L.visible,pivot:[...L.pivot],z:L.z+1,name:L.name+'_copy'});
+  layers.forEach(l=>{ if(l.z>L.z) l.z++; }); layers.push(c); select(c); buildLayers(); render();
+}
+
+// ---- animation preview state ----
+let playing=false, motionMod=null, grooveState=null;
+const springMap=new Map(), offsetMap=new Map();
+let animRaf=null, lastAnimT=0, lastGroove=null;
+
+async function ensureMotion(){
+  if(motionMod) return;
+  motionMod = await import('../renderer/motion.js');
+  grooveState = motionMod.makeGrooveState(120);
+}
+
+async function togglePlay(){
+  if(playing){
+    playing=false; cancelAnimationFrame(animRaf);
+    offsetMap.clear(); lastGroove=null;
+    $('playBtn').textContent='▶ 再生'; $('playStatus').textContent='停止中 — 120BPM固定';
+    render(); return;
+  }
+  await ensureMotion();
+  playing=true; springMap.clear(); offsetMap.clear();
+  for(const L of layers) springMap.set(L.id,{ang:0,vel:0});
+  grooveState = motionMod.makeGrooveState(120);
+  lastAnimT = performance.now();
+  $('playBtn').textContent='⏹ 停止'; $('playStatus').textContent='再生中 (120 BPM)';
+  function frame(now){
+    if(!playing) return;
+    const dt=Math.min((now-lastAnimT)/1000,0.1); lastAnimT=now;
+    // 実音がないので疑似音量（拍ごとに脈動）を与えて上下動も確認できるように
+    const fakeLevel=0.25+0.45*Math.abs(Math.sin(grooveState.bodyPhase));
+    const g=motionMod.tickGroove(grooveState,dt,fakeLevel); lastGroove=g;
+    for(const L of layers){
+      const group=motionMod.GROUP_BY_NAME[L.name]??motionMod.GROUP_BY_INDEX[L.srcIndex]??'body';
+      const cfg=motionMod.GROUP_CONFIG[group];
+      if(!cfg||motionMod.HAIR_WAVE_PARTS.has(L.name)){
+        offsetMap.set(L.id,{rotRad:0,dy:0,isWave:motionMod.HAIR_WAVE_PARTS.has(L.name)});
+      } else {
+        const sp=springMap.get(L.id);
+        const rotRad=motionMod.stepSpring(sp,g.hairDrive*cfg.gain*cfg.dir,cfg,dt);
+        offsetMap.set(L.id,{rotRad,dy:g.vol*cfg.yLag,isWave:false});
+      }
+    }
+    render();
+    animRaf=requestAnimationFrame(frame);
+  }
+  animRaf=requestAnimationFrame(frame);
+}
+
+// ---- render ----
+const WAVE_ROWS=10;
+function drawLayer(L){
+  const lib=libBySrc(L.srcIndex), w=lib.img.naturalWidth, h=lib.img.naturalHeight;
+  const off=offsetMap.get(L.id)||{rotRad:0,dy:0,isWave:false};
+
+  if(off.isWave && lastGroove){
+    // Hair wave: draw as horizontal slices shifted by wave offset
+    const offsets=motionMod.hairRowOffsets(lastGroove.t,lastGroove.sway,lastGroove.act,WAVE_ROWS+1);
+    const sliceH=h/WAVE_ROWS;
+    ctx.save();
+    const [sx,sy]=w2s(L.x,L.y+off.dy);
+    ctx.translate(sx,sy);
+    ctx.scale(view.scale*(L.flip?-1:1)*L.scale, view.scale*L.scale);
+    for(let r=0;r<WAVE_ROWS;r++){
+      const xOff=(offsets[r]+offsets[r+1])/2;
+      ctx.drawImage(lib.img, 0,r*sliceH,w,sliceH,
+        -L.pivot[0]*w+xOff, r*sliceH-L.pivot[1]*h, w, sliceH);
+    }
+    ctx.restore();
+    return;
+  }
+
+  ctx.save();
+  const [sx,sy]=w2s(L.x, L.y+off.dy);
+  ctx.translate(sx,sy);
+  ctx.rotate(L.rot*Math.PI/180+off.rotRad);
+  ctx.scale(view.scale*(L.flip?-1:1)*L.scale, view.scale*L.scale);
+  ctx.drawImage(lib.img, -L.pivot[0]*w, -L.pivot[1]*h);
+  ctx.restore();
+}
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(refImg && $('refOn').checked){ ctx.save(); ctx.globalAlpha=$('refOpacity').value/100;
+    const [ox,oy]=w2s(0,0); ctx.drawImage(refImg,ox,oy,WORLD_W*view.scale,WORLD_H*view.scale); ctx.restore(); }
+  for(const L of [...layers].sort((a,b)=>a.z-b.z)) if(L.visible) drawLayer(L);
+  if(sel){ const lib=libBySrc(sel.srcIndex), w=lib.img.naturalWidth, h=lib.img.naturalHeight;
+    ctx.save(); const [sx,sy]=w2s(sel.x,sel.y); ctx.translate(sx,sy); ctx.rotate(sel.rot*Math.PI/180);
+    const ss=view.scale*sel.scale, fx=(sel.flip?-1:1);
+    ctx.strokeStyle='#5b8cff'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+    ctx.strokeRect(-sel.pivot[0]*w*ss*fx,-sel.pivot[1]*h*ss,w*ss*fx,h*ss); ctx.setLineDash([]);
+    ctx.fillStyle='#ff5b8c'; ctx.beginPath(); ctx.arc(0,0,4,0,7); ctx.fill();
+    ctx.strokeStyle='#ff5b8c'; ctx.beginPath(); ctx.moveTo(-9,0);ctx.lineTo(9,0);ctx.moveTo(0,-9);ctx.lineTo(0,9); ctx.stroke();
+    ctx.restore(); }
+}
+function hitTest(wx,wy){
+  for(const L of [...layers].filter(l=>l.visible).sort((a,b)=>b.z-a.z)){
+    const lib=libBySrc(L.srcIndex), w=lib.img.naturalWidth, h=lib.img.naturalHeight;
+    let dx=wx-L.x, dy=wy-L.y; const a=-L.rot*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    let rx=dx*c-dy*s, ry=dx*s+dy*c; rx/=(L.flip?-1:1)*L.scale; ry/=L.scale;
+    const lx=Math.round(rx+L.pivot[0]*w), ly=Math.round(ry+L.pivot[1]*h);
+    if(lx<0||ly<0||lx>=w||ly>=h) continue;
+    if(lib.off.getImageData(lx,ly,1,1).data[3]>30) return L;
+  } return null;
+}
+
+// ---- interactions ----
+let drag=null;
+canvas.addEventListener('mousedown',e=>{
+  const [wx,wy]=s2w(e.offsetX,e.offsetY);
+  if(pivotMode && sel){ const lib=libBySrc(sel.srcIndex), w=lib.img.naturalWidth, h=lib.img.naturalHeight;
+    let dx=wx-sel.x, dy=wy-sel.y; const a=-sel.rot*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    let rx=dx*c-dy*s, ry=dx*s+dy*c; rx/=(sel.flip?-1:1)*sel.scale; ry/=sel.scale;
+    sel.pivot=[(rx+sel.pivot[0]*w)/w,(ry+sel.pivot[1]*h)/h]; sel.x=wx; sel.y=wy;
+    pivotMode=false; $('setPivot').classList.remove('primary'); syncProps(); render(); return; }
+  const hit=hitTest(wx,wy);
+  if(hit && !e.shiftKey){ select(hit); drag={mode:'move',sx:e.offsetX,sy:e.offsetY,ox:hit.x,oy:hit.y}; canvas.classList.add('dragging'); }
+  else { drag={mode:'pan',sx:e.offsetX,sy:e.offsetY,vx:view.x,vy:view.y}; canvas.classList.add('dragging'); }
+});
+window.addEventListener('mousemove',e=>{
+  const [wx,wy]=s2w(e.offsetX,e.offsetY);
+  $('hud').textContent=`x ${Math.round(wx)}  y ${Math.round(wy)}  z${view.scale.toFixed(2)}`;
+  if(!drag) return;
+  if(drag.mode==='pan'){ view.x=drag.vx+(e.offsetX-drag.sx); view.y=drag.vy+(e.offsetY-drag.sy); render(); }
+  else if(drag.mode==='move' && sel){ sel.x=drag.ox+(e.offsetX-drag.sx)/view.scale; sel.y=drag.oy+(e.offsetY-drag.sy)/view.scale; syncProps(); render(); }
+});
+window.addEventListener('mouseup',()=>{ drag=null; canvas.classList.remove('dragging'); });
+canvas.addEventListener('wheel',e=>{ e.preventDefault();
+  const f=e.deltaY<0?1.1:1/1.1; const [wx,wy]=s2w(e.offsetX,e.offsetY);
+  view.scale=Math.min(2,Math.max(0.05,view.scale*f)); view.x=e.offsetX-wx*view.scale; view.y=e.offsetY-wy*view.scale;
+  syncZoom(); render(); },{passive:false});
+window.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if(sel && (e.key==='Delete'||e.key==='Backspace')){ e.preventDefault(); deleteLayer(sel); return; }
+  if(!sel) return; const step=e.shiftKey?10:1; let h=false;
+  if(e.key==='ArrowLeft'){sel.x-=step;h=true;} if(e.key==='ArrowRight'){sel.x+=step;h=true;}
+  if(e.key==='ArrowUp'){sel.y-=step;h=true;} if(e.key==='ArrowDown'){sel.y+=step;h=true;}
+  if(h){ e.preventDefault(); syncProps(); render(); }
+});
+
+// ---- selection & props ----
+function select(L){ sel=L; document.querySelectorAll('.layer').forEach(el=>el.classList.toggle('sel',+el.dataset.id===(L&&L.id))); syncProps(); render(); }
+function syncProps(){
+  $('pname').value = sel?sel.name:'';
+  if(!sel) return;
+  $('px').value=Math.round(sel.x); $('py').value=Math.round(sel.y);
+  $('pscale').value=sel.scale.toFixed(3); $('pscaleR').value=Math.round(sel.scale*100);
+  $('prot').value=sel.rot; $('protR').value=sel.rot;
+  $('pflip').checked=sel.flip; $('pvis').checked=sel.visible;
+  $('ppx').value=sel.pivot[0].toFixed(3); $('ppy').value=sel.pivot[1].toFixed(3);
+}
+['px','py','pscale','prot','ppx','ppy'].forEach(id=>$(id).addEventListener('input',()=>{ if(!sel)return;
+  sel.x=+$('px').value; sel.y=+$('py').value; sel.scale=+$('pscale').value||0.01; sel.rot=+$('prot').value;
+  sel.pivot=[+$('ppx').value,+$('ppy').value]; $('pscaleR').value=Math.round(sel.scale*100); $('protR').value=sel.rot; render(); }));
+$('pname').addEventListener('input',()=>{ if(sel){ sel.name=$('pname').value; buildLayers(); } });
+$('pscaleR').addEventListener('input',()=>{ if(!sel)return; sel.scale=$('pscaleR').value/100; $('pscale').value=sel.scale.toFixed(3); render(); });
+$('protR').addEventListener('input',()=>{ if(!sel)return; sel.rot=+$('protR').value; $('prot').value=sel.rot; render(); });
+$('pflip').addEventListener('change',()=>{ if(sel){sel.flip=$('pflip').checked; render();} });
+$('pvis').addEventListener('change',()=>{ if(sel){sel.visible=$('pvis').checked; buildLayers(); render();} });
+$('setPivot').addEventListener('click',()=>{ pivotMode=!pivotMode; $('setPivot').classList.toggle('primary',pivotMode); });
+$('delBtn').addEventListener('click',()=>{ if(sel) deleteLayer(sel); });
+$('dupBtn').addEventListener('click',()=>{ if(sel) dupLayer(sel); });
+$('libToggle').addEventListener('click',()=>$('library').classList.toggle('open'));
+
+// ---- layers panel ----
+function buildLayers(){
+  const box=$('layers'); box.innerHTML='';
+  [...layers].sort((a,b)=>b.z-a.z).forEach(L=>{
+    const row=document.createElement('div'); row.className='layer'+(sel===L?' sel':''); row.dataset.id=L.id;
+    row.innerHTML=`<span class="eye ${L.visible?'on':''}">${L.visible?'👁':'·'}</span>
+      <span class="nm">${L.name} <span style="color:#777">#${L.srcIndex}</span></span>
+      <span class="ord"><button data-d="up">▲</button><button data-d="dn">▼</button></span>
+      <button class="del" title="削除">🗑</button>`;
+    row.querySelector('.eye').onclick=ev=>{ ev.stopPropagation(); L.visible=!L.visible; buildLayers(); render(); };
+    row.querySelector('.del').onclick=ev=>{ ev.stopPropagation(); deleteLayer(L); };
+    row.querySelectorAll('.ord button').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); reorder(L,b.dataset.d); });
+    row.onclick=()=>select(L); box.appendChild(row);
+  });
+}
+function reorder(L,dir){ const arr=[...layers].sort((a,b)=>a.z-b.z); const i=arr.indexOf(L); const j=dir==='up'?i+1:i-1;
+  if(j<0||j>=arr.length) return; [arr[i].z,arr[j].z]=[arr[j].z,arr[i].z]; buildLayers(); render(); }
+
+// ---- view ----
+function fitView(){ const pad=40, sw=canvas.width-pad*2, sh=canvas.height-pad*2;
+  view.scale=Math.min(sw/WORLD_W,sh/WORLD_H); view.x=pad+(sw-WORLD_W*view.scale)/2; view.y=pad+(sh-WORLD_H*view.scale)/2; syncZoom(); render(); }
+function syncZoom(){ $('zoom').value=Math.round(view.scale*100); $('zoomv').textContent=Math.round(view.scale*100)+'%'; }
+$('fitBtn').onclick=fitView;
+$('zoom100').onclick=()=>{ const cx=canvas.width/2,cy=canvas.height/2,[wx,wy]=s2w(cx,cy); view.scale=1; view.x=cx-wx; view.y=cy-wy; syncZoom(); render(); };
+$('zoom').oninput=()=>{ const cx=canvas.width/2,cy=canvas.height/2,[wx,wy]=s2w(cx,cy); view.scale=$('zoom').value/100; view.x=cx-wx*view.scale; view.y=cy-wy*view.scale; syncZoom(); render(); };
+$('refOn').onchange=render; $('refOpacity').oninput=render;
+
+// ---- export / import ----
+function layoutObj(){ return { canvas:[WORLD_W,WORLD_H], reference:'assets/reference.png',
+  parts:[...layers].sort((a,b)=>a.z-b.z).map(L=>({ name:L.name, index:L.srcIndex, file:`part_${String(L.srcIndex).padStart(2,'0')}.png`,
+    cx:Math.round(L.x), cy:Math.round(L.y), scale:+L.scale.toFixed(4), rot:+L.rot.toFixed(2),
+    flip:L.flip, pivot:[+L.pivot[0].toFixed(4),+L.pivot[1].toFixed(4)], z:L.z, visible:L.visible })) }; }
+function refreshJson(){ $('jsonOut').value=JSON.stringify(layoutObj()); }
+$('exportBtn').onclick=()=>{ const blob=new Blob([JSON.stringify(layoutObj(),null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='layout.json'; a.click(); refreshJson(); };
+$('copyBtn').onclick=()=>{ refreshJson(); $('jsonOut').select(); navigator.clipboard.writeText($('jsonOut').value); };
+$('importFile').onchange=async e=>{ const f=e.target.files[0]; if(!f)return; const j=JSON.parse(await f.text());
+  layers=[]; sel=null; nextId=1;
+  for(const it of (j.parts||[])) layers.push(makeLayer(it.index,{name:it.name,x:it.cx,y:it.cy,scale:it.scale,
+    rot:it.rot||0,flip:!!it.flip,pivot:it.pivot||[.5,.5],z:it.z,visible:it.visible!==false}));
+  layers.sort((a,b)=>a.z-b.z).forEach((l,i)=>l.z=i); buildLayers(); render(); };
+$('resetBtn').onclick=()=>{ if(confirm('初期配置に戻しますか？')) boot(); };
+$('playBtn').onclick=togglePlay;
+
+boot();
+</script>
+</body>
+</html>

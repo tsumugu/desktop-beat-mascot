@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <script src="./error_logger.js"></script>
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' blob:; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data:;" />
+  <title>Desktop Mascot</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      user-select: none;
+      font-family: -apple-system, sans-serif;
+    }
+    #stage { width: 100%; height: 100%; }
+
+    /* 操作パネル: 普段は薄く、ホバーで濃く */
+    #panel {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      padding: 6px 8px;
+      background: rgba(20, 20, 28, 0.35);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 11px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 10;
+    }
+    #panel:hover { opacity: 1; }
+    #panel select, #panel button, #panel label {
+      font-size: 11px;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 6px;
+      cursor: pointer;
+    }
+    #file { display: none; }
+    
+    /* グラフ用コンテナ */
+    #graphContainer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 160px;
+      background: rgba(20, 20, 28, 0.9);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: none;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #debugGraph {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <div id="panel">
+    <select id="source" title="音源を選択">
+      <option value="">— 音源を選択 —</option>
+      <option value="file">🎵 mp3ファイル…</option>
+    </select>
+    <button id="play" title="再生/停止">▶︎</button>
+    <button id="toggleGraph" title="グラフ表示切替">📈</button>
+    <button id="quit" title="終了">✕</button>
+    <input id="file" type="file" accept="audio/*" />
+  </div>
+
+  <div id="graphContainer">
+    <canvas id="debugGraph"></canvas>
+  </div>
+
+  <script type="module" src="./dist/bundle.js"></script>
+</body>
+</html>
