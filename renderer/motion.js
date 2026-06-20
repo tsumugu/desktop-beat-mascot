@@ -179,9 +179,12 @@ export function tickGroove(state, dt, feat = {}) {
   const bounceMoodMod = 0.5 + mood * 1.0;       // mood=0で0.5倍、mood=1で1.5倍
 
   // 間奏（ボーカル不在）時のノリの変化も組み合わせる
-  const isVocal = feat.pitchConfidence > 0.4;
-  const swayMultiplier = (isVocal ? 1.0 : 0.6) * swayMoodMod;
-  let bounceMultiplier = (isVocal ? 1.0 : 1.3) * bounceMoodMod;
+  // 急激な値のジャンプによる全身の「小刻みな揺れ」を防ぐため、滑らかにブレンドする
+  const pitchConf = feat.pitchConfidence || 0;
+  const isVocal = pitchConf > 0.4;
+  const vocalPresence = Math.max(0, Math.min(1, pitchConf * 1.5));
+  const swayMultiplier = (0.6 + 0.4 * vocalPresence) * swayMoodMod;
+  let bounceMultiplier = (1.3 - 0.3 * vocalPresence) * bounceMoodMod;
 
   // excite状態(テンションが高い時)は縦ノリをさらに強くする
   if (state.hypeFactor > 0.9) {
