@@ -179,6 +179,8 @@ function drawGraph() {
   const w = graphCanvas.width;
   const h = graphCanvas.height;
   gctx.clearRect(0, 0, w, h);
+  gctx.fillStyle = '#000000';
+  gctx.fillRect(0, 0, w, h);
 
   const dx = w / MAX_HISTORY;
   
@@ -204,11 +206,8 @@ function drawGraph() {
     gctx.stroke();
   };
 
-  // reactionVol (水色: 瞬間的な音量)
-  drawLine('reactionVol', 'rgba(0, 200, 255, 0.5)');
-
-  // targetHype (黄色: Hypeの目標値/エネルギー比率)
-  drawLine('targetHype', 'rgba(255, 200, 0, 0.6)');
+  // reactionVol (瞬間的な音量) を黄色で描画
+  drawLine('reactionVol', 'rgba(255, 200, 0, 0.7)');
 
   // hypeFactor (赤色: 実際の盛り上がり度)
   drawLine('hypeFactor', 'rgba(255, 50, 50, 1.0)');
@@ -290,18 +289,24 @@ function drawGraph() {
     const latest = graphHistory[graphHistory.length - 1];
     if (latest.songMood !== undefined) {
       const mood = latest.songMood;
-      // ゲージの幅・配置（グラフの上部中央）
       const gw = 140;
       const gh = 8;
-      const gx = w / 2 - gw / 2;
+      // 全体の横幅を計算して中央揃えにする
+      const textMetrics = gctx.measureText('100%'); // おおよその最大幅
+      const gap = 8;
+      const totalW = gw + gap + textMetrics.width;
+      const gx = w / 2 - totalW / 2;
       const gy = 25;
 
-      // テキスト表示
+      // テキスト表示 (上部)
       gctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       gctx.font = 'bold 12px sans-serif';
       gctx.textAlign = 'center';
       gctx.textBaseline = 'bottom';
-      gctx.fillText(`VIBE: ${mood < 0.5 ? 'Melodic' : 'Rhythmic'} [${Math.round(mood * 100)}%]`, w / 2, gy - 4);
+      
+      const currentMood = window.mascot && window.mascot.feat ? (window.mascot.feat.currentMood || 0.5) : 0.5;
+      const moodLabel = currentMood < 0.5 ? 'Melodic' : 'Rhythmic';
+      gctx.fillText(`VIBE (Now): ${moodLabel}`, w / 2, gy - 4);
       
       // ゲージの背景
       gctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
@@ -310,6 +315,12 @@ function drawGraph() {
       // ゲージの中身 (青:Melodic 〜 赤:Rhythmic)
       gctx.fillStyle = `hsl(${220 - mood * 220}, 80%, 60%)`; 
       gctx.fillRect(gx, gy, gw * mood, gh);
+
+      // パーセンテージ表示 (ゲージの右横)
+      gctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      gctx.textAlign = 'left';
+      gctx.textBaseline = 'middle';
+      gctx.fillText(`${Math.round(mood * 100)}%`, gx + gw + gap, gy + gh / 2 + 1);
     }
   }
 }

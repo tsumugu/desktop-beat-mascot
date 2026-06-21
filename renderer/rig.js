@@ -162,6 +162,10 @@ export class Rig {
           this._eyeOpenTex = tex;
           if (emotion !== 'neutral') {
             this._blinkCloseT = 0; // neutral以外ではまばたきをキャンセル
+          } else {
+            // neutralに戻った直後にまばたきが発生すると「表情がコロコロ変わる」ように見えるため、タイマーをリセット
+            this._blinkWait = this._randBlinkGap();
+            this._blinkCloseT = 0;
           }
         }
       } catch (e) {
@@ -324,20 +328,26 @@ export class Rig {
     } else if (g.pitchDelta > 12 && g.midBeat > 0.3 && this._emotionCooldown <= 0) {
       // 音程の激しい跳躍（1オクターブ以上）＋アタックがあった時、瞬間的にexcite
       this.setEmotion('excite');
-      this._emotionCooldown = 0.8;
+      this._emotionCooldown = 1.5; // 少し長めに見せる
     } else if (this.autoEmotion && this._emotionCooldown <= 0) {
+      // 現在のテンションから目標の表情を決定
+      let targetEmotion = 'neutral';
       if (g.midBeat > 1.3 || g.hypeFactor > 0.92) {
-        // ボーカルのアクセント(しきい値を1.3へ低下)、または曲のテンションが最高潮(Hype>0.92)の時に(>o<)になる
-        this.setEmotion('excite');
-        this._emotionCooldown = 1.2; // 1.2秒間維持
+        // ボーカルのアクセント、または曲のテンションが最高潮の時
+        targetEmotion = 'excite';
       } else if (g.hypeFactor > 0.7) {
         // サビの通常時は笑顔
-        this.setEmotion('happy');
+        targetEmotion = 'happy';
       } else if (this._lowHypeTimer > 60) {
-        // 無音ではなく、静かな状態が60秒以上続いた場合のみ泣く(バラード等の表現)
-        this.setEmotion('cry');
-      } else {
-        this.setEmotion('neutral');
+        // 静かな状態が長く続いた場合は泣く
+        targetEmotion = 'cry';
+      }
+
+      // 表情が変更される場合、コロコロ変わるのを防ぐためにクールダウン（余韻）を設ける
+      if (targetEmotion !== this.currentEmotion) {
+        this.setEmotion(targetEmotion);
+        // 新しい表情になったら、1秒間はその表情をキープする
+        this._emotionCooldown = 1.0;
       }
     }
     if (this._emotionCooldown > 0) this._emotionCooldown -= dt;

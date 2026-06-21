@@ -49,6 +49,8 @@ export class AudioEngine {
     this.lastPitch = 0;
     this.pitchDelta = 0;
 
+    // 音量の正規化(Auto Gain Control)用
+    this.maxLevel = 0.01;
   }
 
   async resume() {
@@ -222,23 +224,36 @@ export class AudioEngine {
     this.analyser.getByteFrequencyData(this.freq);
 
     // 全体音量: Meyda の RMS（無ければ time-domain から算出）
-    let level = this.rms;
+    let rawLevel = this.rms;
     // meydaが無い、もしくはmeydaのコールバックが一度も呼ばれていなくてlevelが0のままの場合はフォールバック
-    if (!this.meyda || (!this._meydaActive && level === 0)) {
+    if (!this.meyda || (!this._meydaActive && rawLevel === 0)) {
       this.analyser.getByteTimeDomainData(this.time);
       let sum = 0;
       for (let i = 0; i < this.time.length; i++) {
         const v = (this.time[i] - 128) / 128;
         sum += v * v;
       }
-      level = Math.sqrt(sum / this.time.length);
+      rawLevel = Math.sqrt(sum / this.time.length);
       
       // Meydaが内部エラーで止まっている場合はMeydaを破棄して完全フォールバックに移行
-      if (this.meyda && level > 0) {
+      if (this.meyda && rawLevel > 0) {
         this.meyda = null;
       }
     }
-    level = Math.min(1, level * 2.2);   // 見栄え用ゲイン
+
+    // 入力音量の正規化（Auto Gain Control）
+    // 曲の展開（静かなイントロ等）を潰さず、ユーザーの「マスターボリューム設定」だけを吸収するため、
+    // 非常にゆっくり（数分かけて）減衰させる
+    this.maxLevel = Math.max(0.01, this.maxLevel * 0.9999);
+    if (rawLevel > this.maxLevel) {
+      this.maxLevel = rawLevel;
+    }
+
+    // 正規化された値(0.0〜1.0)を 1.8 乗することで「ダイナミクス（強弱の差）」を強調します。
+    // 近年の音楽は音圧（平均レベル）が常に高いため、これを行わないとのっぺりと常に高い値になりがちです。
+    let normalized = rawLevel / this.maxLevel;
+    let level = Math.pow(normalized, 1.8) * 0.45;
+    level = Math.min(1, level);
 
     // 各帯域エネルギー (fftSize=1024 なので 1bin ≒ 43Hz)
     let bassSum = 0, midSum = 0, highSum = 0;
@@ -251,13 +266,30 @@ export class AudioEngine {
     const high = highSum / (130 * 255);
 
     // 曲調プロファイラー (songMood: 0.0=Melodic, 1.0=Rhythmic)
-    // 低音成分が中高音成分に対してどれくらい強いかで判定する
-    const totalFreq = bass + mid + high + 0.001;
+    // ピンクノイズ特性を補正するため、中高音に重み付けをする
+    // （重みが強すぎると常にMelodic判定になってしまうためマイルドに調整）
+    const weightedMid = mid * 1.5;
+    const weightedHigh = high * 2.0;
+    const totalFreq = bass + weightedMid + weightedHigh + 0.001;
+    
+    // 低音成分が全体に対してどれくらい強いかで判定する
     const drumRatio = bass / totalFreq;
-    // drumRatio は通常 0.1(静か) 〜 0.7(EDMキック) 程度。これを 0.0〜1.0 にマッピング
-    const currentMood = Math.max(0, Math.min(1, (drumRatio - 0.2) * 2.5));
-    // 5〜10秒程度のゆっくりとした移動平均で曲調を追跡 (60fps想定で約0.5秒の平滑化、ただし実際はもっとゆっくり追従させる)
-    this.songMood += (currentMood - this.songMood) * 0.005;
+    const freqMood = Math.max(0, Math.min(1, (drumRatio - 0.2) * 2.5));
+
+    // 新しい判定要素1: 平均音量（音圧・コンプレッション感）
+    // サビ等で一気に盛り上がった時にすぐ反応できるよう、上がる時は速く、下がる時は遅くする（ラグの解消）
+    this.longTermLevel = (this.longTermLevel || 0);
+    const levelAlpha = level > this.longTermLevel ? 0.05 : 0.005;
+    this.longTermLevel += (level - this.longTermLevel) * levelAlpha;
+    const energyMood = Math.max(0, Math.min(1, (this.longTermLevel - 0.08) * 6.0)); // 0.08以下でMelodic, 0.25以上でRhythmic
+
+    // 3つの要素を合成して最終的な曲調を決定（周波数の偏り + 全体の音圧）
+    // これにより、単なる低音の量だけでなく「曲自体の元気さ・静かさ」をより正確に捉えられます
+    const currentMood = (freqMood * 0.4) + (energyMood * 0.6);
+    this.currentMood = currentMood;
+    
+    // 曲自体の「全体的なジャンル・雰囲気」を示すため、非常にゆっくりと追従させる（グラフのブレを防ぐ）
+    this.songMood += (currentMood - this.songMood) * 0.002;
 
     // ビート検出: 低域エネルギーが履歴平均×感度を超え、不応期を過ぎたら true
     const energy = bass;
@@ -270,6 +302,14 @@ export class AudioEngine {
         now - this.lastBeatAt > this.beatRefractory) {
       beat = true;
       this.lastBeatAt = now;
+    }
+    
+    // 新しい判定要素2: ビートの密度 (四つ打ちなどで定期的にビートが来る曲はRhythmic寄りにする補正)
+    this.beatDensity = (this.beatDensity || 0) * 0.998; 
+    if (beat) this.beatDensity += 0.02;
+    // ビート密度が高い場合は少しRhythmic方向に引き上げる
+    if (this.beatDensity > 0.3) {
+      this.songMood = Math.min(1.0, this.songMood + 0.001); 
     }
     this.energyHistory.push(energy);
     if (this.energyHistory.length > this.historySize) this.energyHistory.shift();
@@ -354,7 +394,8 @@ export class AudioEngine {
     return { 
       level, bass, mid, high, centroid: this.centroid, beat, midBeat, keyChange, 
       pitch, pitchConfidence: this.pitchConfidence, longTermPitch: this.longTermPitch, pitchDelta: this.pitchDelta,
-      songMood: this.songMood // 曲調（雰囲気）
+      songMood: this.songMood,
+      currentMood: this.currentMood
     };
   }
 }

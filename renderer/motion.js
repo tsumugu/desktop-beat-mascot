@@ -89,20 +89,21 @@ export function tickGroove(state, dt, feat = {}) {
 
   // 楽曲展開（サビ・間奏）を検知する Macroscopic Dynamics 処理
   // 1. 長期エネルギーの追跡（非対称スムージング）
-  // 盛り上がる（上がる）時は速く、下がる時は非常に遅くすることで、途中で冷めるのを防ぐ
-  // （コロコロ変わるように少し追従速度を上げます）
-  const effectivePeak = Math.max(state.peakEnergy, 0.35); // ピアノ曲などで過大評価させない下限
+  // AGC(自動音量調整)が入ったため、下限(0.35)のハードコードは不要。無音時の0割防止程度にする。
+  const effectivePeak = Math.max(state.peakEnergy, 0.05); 
   if (vol > state.peakEnergy) state.peakEnergy += (vol - state.peakEnergy) * 0.1;
   else state.peakEnergy += (vol - state.peakEnergy) * 0.0005;
 
   state.longTermEnergy += (vol - state.longTermEnergy) * (vol > state.longTermEnergy ? 0.02 : 0.001);
 
   // 2. ピークに対する現在のエネルギーの割合からHypeを算出
-  // 瞬間的な音量(reactionVol)を混ぜることで、曲のフレーズごとにコロコロと表情が変わるようにする
-  let energyRatio = (state.longTermEnergy * 0.5 + reactionVol * 0.5) / (effectivePeak + 0.001);
+  // 瞬間的な音量(reactionVol)の割合を下げて(20%)、長期的なエネルギー(80%)を重視することで
+  // targetHype（黄色線）が毎フレーム暴れるのを防ぎ、より安定した曲の展開を表現する
+  let energyRatio = (state.longTermEnergy * 0.8 + reactionVol * 0.2) / (effectivePeak + 0.001);
 
-  // 指数関数ではなく、変化の「傾き（スロープ）」を強くしてメリハリをつける
-  let targetHype = Math.min(1.0, Math.max(0, (energyRatio - 0.25) * 2.0));
+  // 一次関数だとAGC環境下で常に1.0に張り付いてしまうため、べき乗（3乗）にしてダイナミクスを強調する
+  // 1.0 (サビ) -> 1.0,  0.8 (Aメロ) -> 0.51,  0.6 (静か) -> 0.21
+  let targetHype = Math.pow(Math.max(0, Math.min(1.0, energyRatio)), 3.0);
 
   // 【追加】ピッチの高さによるHypeボーナス (新時代的な高音域での爆発)
   let pitchHypeBonus = 0;
