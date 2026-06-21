@@ -194,15 +194,24 @@ export function tickGroove(state, dt, feat = {}) {
 
   // ピンクの点（高音域での爆発）に合わせた、うなづきの目標値
   let headBobTarget = 0;
+  const currentMood = feat.currentMood !== undefined ? feat.currentMood : 0.5;
   if (pitchHypeBonus > 0) {
-    // 振幅が小さいとスプリングで相殺されて見えなくなるため、最低値(80.0)を保証する
-    const amp = Math.max(80.0, pitchHypeBonus * 160.0);
+    // 以前の下駄(80.0)と係数(160.0)をベースに戻す
+    let amp = Math.max(80.0, pitchHypeBonus * 160.0);
+    
+    // 静かな曲(Melodic)では大きくうなずきすぎないように、now vibeでスケールダウン
+    const moodScale = 0.5 + 0.5 * Math.pow(Math.max(0, currentMood), 2.0); 
+    amp *= moodScale;
+
+    // 「沈み込みすぎ」を防ぐための最大値クリッピング (110.0まで)
+    amp = Math.min(amp, 110.0);
+    
     headBobTarget = amp * Math.max(0, Math.sin(state.bodyPhase * 2.0));
   }
 
   // 合いの手用スプリング（headBobTargetに滑らかに収束する）
-  // 物理バネを使うことで、瞬間的なワープ（ビクビク）を防ぎ、自然に下がって戻る動きを作る
-  state.headBobVel += (40 * (headBobTarget - state.headBob) - 8 * state.headBobVel) * dt;
+  // ダンピング係数を上げて（8 → 13）バネのような揺れ戻し（ビヨーンという動き）を抑え、スッと戻るようにする
+  state.headBobVel += (40 * (headBobTarget - state.headBob) - 13 * state.headBobVel) * dt;
   state.headBob += state.headBobVel * dt;
 
   return {
