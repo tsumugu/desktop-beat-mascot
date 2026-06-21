@@ -163,8 +163,12 @@ export function tickGroove(state, dt, feat = {}) {
   const bouncePhase = Math.sin(state.bodyPhase - phaseDelay);
   const baseBounce = bouncePhase * bouncePhase;
 
+  const currentMood = feat.currentMood !== undefined ? feat.currentMood : 0.5;
+
   // バウンスの深さ：体全体の上下動は控えめにし、頭のうなずきに任せる
-  const hypeScaleBounce = 0.2 + state.hypeFactor * 1.8; // Hype=0なら0.2倍、Hype=1なら2.0倍
+  // ノリの大きさには hype(盛り上がり) × vibe(リズミカルさ) を使う
+  const hypeVibeBounce = state.hypeFactor * currentMood;
+  const hypeScaleBounce = 0.1 + hypeVibeBounce * 2.5; // Hype×Vibe=0なら0.1倍、1なら2.6倍
   const bounceDepth = (2 + state.grooveEnergy * (3 + state.vibe * 12)) * hypeScaleBounce;
   // 直接的な上下のリアクションも重み付け(reactionVol)を使い、ピアノ等では跳ねすぎないようにする
   const bounceTarget = baseBounce * env * bounceDepth + reactionVol * 5;
@@ -194,13 +198,13 @@ export function tickGroove(state, dt, feat = {}) {
 
   // ピンクの点（高音域での爆発）に合わせた、うなづきの目標値
   let headBobTarget = 0;
-  const currentMood = feat.currentMood !== undefined ? feat.currentMood : 0.5;
   if (pitchHypeBonus > 0) {
     // 以前の下駄(80.0)と係数(160.0)をベースに戻す
     let amp = Math.max(80.0, pitchHypeBonus * 160.0);
     
-    // 静かな曲(Melodic)では大きくうなずきすぎないように、now vibeでスケールダウン
-    const moodScale = 0.5 + 0.5 * Math.pow(Math.max(0, currentMood), 2.0); 
+    // 首振りにも hype * vibe を適用し、盛り上がっていてかつリズミカルな時だけ強くうなずく
+    const hypeVibeHead = state.hypeFactor * currentMood;
+    const moodScale = 0.3 + 0.7 * hypeVibeHead; 
     amp *= moodScale;
 
     // 「沈み込みすぎ」を防ぐための最大値クリッピング (110.0まで)

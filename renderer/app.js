@@ -212,6 +212,9 @@ function drawGraph() {
   // hypeFactor (赤色: 実際の盛り上がり度)
   drawLine('hypeFactor', 'rgba(255, 50, 50, 1.0)');
 
+  // songMood (青色: 蓄積された曲調)
+  drawLine('songMood', 'rgba(50, 150, 255, 1.0)');
+
   // 間奏の背景シェード (青暗い) の描画
   gctx.beginPath();
   for (let i = 0; i < graphHistory.length; i++) {
@@ -288,26 +291,39 @@ function drawGraph() {
   if (graphHistory.length > 0) {
     const latest = graphHistory[graphHistory.length - 1];
     if (latest.songMood !== undefined) {
-      const mood = latest.songMood;
+      const hypeFactor = latest.hypeFactor || 0;
+      const featMood = latest.currentMood !== undefined ? latest.currentMood : 0.5;
+      const mood = hypeFactor * featMood;
       const gw = 140;
       const gh = 8;
       // 全体の横幅を計算して中央揃えにする
-      const textMetrics = gctx.measureText('100%'); // おおよその最大幅
+      gctx.font = 'bold 12px sans-serif';
+      const leftStr = 'hype(red) × vibe(blue): ';
+      const rightStr = '100%';
+      const leftW = gctx.measureText(leftStr).width;
+      const rightW = gctx.measureText(rightStr).width;
       const gap = 8;
-      const totalW = gw + gap + textMetrics.width;
-      const gx = w / 2 - totalW / 2;
+      const totalW = leftW + gap + gw + gap + rightW;
+      
+      const startX = w / 2 - totalW / 2;
+      const gx = startX + leftW + gap;
       const gy = 25;
 
       // テキスト表示 (上部)
       gctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      gctx.font = 'bold 12px sans-serif';
       gctx.textAlign = 'center';
       gctx.textBaseline = 'bottom';
       
       const currentMood = window.mascot && window.mascot.feat ? (window.mascot.feat.currentMood || 0.5) : 0.5;
       const moodLabel = currentMood < 0.5 ? 'Melodic' : 'Rhythmic';
-      gctx.fillText(`VIBE (Now): ${moodLabel}`, w / 2, gy - 4);
+      gctx.fillText(`Now mood: ${moodLabel}`, w / 2, gy - 4);
       
+      // 左側テキスト
+      gctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      gctx.textAlign = 'left';
+      gctx.textBaseline = 'middle';
+      gctx.fillText(leftStr, startX, gy + gh / 2 + 1);
+
       // ゲージの背景
       gctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
       gctx.fillRect(gx, gy, gw, gh);
