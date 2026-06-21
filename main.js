@@ -65,7 +65,19 @@ ipcMain.on('expand-window-by', (_e, dy) => {
 
 ipcMain.on('quit-app', () => app.quit());
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  const { session, desktopCapturer } = require('electron');
+  session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+      // 最初のディスプレイを選択し、システムオーディオ（loopback）を含める
+      callback({ video: sources[0], audio: 'loopback' });
+    }).catch(err => {
+      console.error('Error getting sources:', err);
+      callback();
+    });
+  });
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

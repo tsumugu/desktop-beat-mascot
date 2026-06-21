@@ -4,9 +4,10 @@ import { AudioEngine } from './audio.js';
 const stageEl = document.getElementById('stage');
 const panel = document.getElementById('panel');
 const sourceSel = document.getElementById('source');
-const playBtn = document.getElementById('play');
+const outputSel = document.getElementById('outputSel');
+const passthroughCheckbox = document.getElementById('passthrough');
+const monitorVolumeSlider = document.getElementById('monitorVolume');
 const toggleGraphBtn = document.getElementById('toggleGraph');
-const fileInput = document.getElementById('file');
 const graphContainer = document.getElementById('graphContainer');
 const graphCanvas = document.getElementById('debugGraph');
 const gctx = graphCanvas.getContext('2d');
@@ -14,8 +15,7 @@ const gctx = graphCanvas.getContext('2d');
 const rig = new Rig();
 const audio = new AudioEngine();
 
-let audioEl = null;       // mp3 用 <audio>
-let playing = false;
+
 
 // グラフ用
 let showGraph = false;
@@ -36,14 +36,54 @@ window.addEventListener('resize', resizeCanvas);
 (async function main() {
   await rig.init(stageEl);
 
-  // 入力デバイス一覧を音源セレクトに追加（BlackHole 等が出る）
+  // 入力デバイス・出力デバイス一覧をセレクトに追加
   try {
-    const devices = await AudioEngine.listInputDevices();
-    for (const d of devices) {
+    let targetInId = null;
+    let fallbackInId = null;
+    const inDevices = await AudioEngine.listInputDevices();
+    for (const d of inDevices) {
       const opt = document.createElement('option');
       opt.value = 'dev:' + d.deviceId;
       opt.textContent = '🎙 ' + (d.label || 'input ' + d.deviceId.slice(0, 6));
       sourceSel.appendChild(opt);
+      
+      if (d.label && d.label.toLowerCase().includes('blackhole')) {
+        targetInId = d.deviceId;
+      }
+      if (d.deviceId === 'default') {
+        fallbackInId = 'default';
+      }
+    }
+    
+    // BlackHoleがあれば優先、なければシステムデフォルト、それもなければ先頭を選択
+    const initialIn = targetInId || fallbackInId || (inDevices.length > 0 ? inDevices[0].deviceId : null);
+    if (initialIn) {
+      sourceSel.value = 'dev:' + initialIn;
+      sourceSel.dispatchEvent(new Event('change'));
+    }
+    let targetOutId = null;
+    let fallbackOutId = null;
+    const outDevices = await AudioEngine.listOutputDevices();
+    for (const d of outDevices) {
+      if (d.deviceId === 'default') {
+        // `default` そのものはブラウザ側の仮想的なラベルになるため、リストには追加しない（実際のデバイスを選ぶため）
+        continue;
+      }
+      
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = '🔊 ' + (d.label || 'output ' + d.deviceId.slice(0, 6));
+      outputSel.appendChild(opt);
+
+      if (d.label && d.label.toLowerCase().includes('macbook')) {
+        targetOutId = d.deviceId;
+      }
+    }
+
+    const initialOut = targetOutId || fallbackOutId || (outDevices.length > 0 ? outDevices[0].deviceId : null);
+    if (initialOut) {
+      outputSel.value = initialOut;
+      outputSel.dispatchEvent(new Event('change'));
     }
   } catch (e) {
     console.warn('デバイス列挙に失敗', e);
@@ -84,50 +124,39 @@ window.addEventListener('resize', resizeCanvas);
 // ---- 音源選択 ----
 sourceSel.addEventListener('change', async () => {
   const v = sourceSel.value;
-  if (v === 'file') {
-    fileInput.click();
-    sourceSel.value = '';
+  if (v === 'system') {
+    try {
+      await audio.useSystemAudio();
+    } catch (e) {
+      console.error('System Audio Error:', e);
+      alert('システム音声の取得に失敗しました。画面収録の権限が必要です。');
+      sourceSel.value = '';
+    }
   } else if (v.startsWith('dev:')) {
     const id = v.slice(4);
     try {
       await audio.useInputDevice(id);
-      playing = true;
     } catch (e) {
       console.error(e);
     }
   }
 });
 
-fileInput.addEventListener('change', () => {
-  const file = fileInput.files && fileInput.files[0];
-  if (!file) return;
-  loadMp3(URL.createObjectURL(file));
+// ---- 出力先選択 ----
+outputSel.addEventListener('change', async () => {
+  const v = outputSel.value;
+  await audio.setOutputDevice(v);
 });
 
-// ウィンドウへ mp3 をドラッグ&ドロップでも読み込める
-window.addEventListener('dragover', (e) => e.preventDefault());
-window.addEventListener('drop', (e) => {
-  e.preventDefault();
-  const f = e.dataTransfer.files && e.dataTransfer.files[0];
-  if (f) loadMp3(URL.createObjectURL(f));
+passthroughCheckbox.addEventListener('change', (e) => {
+  audio.setPassthrough(e.target.checked);
 });
 
-async function loadMp3(url) {
-  if (audioEl) { audioEl.pause(); audioEl = null; }
-  audioEl = new Audio(url);
-  audioEl.loop = true;
-  audioEl.crossOrigin = 'anonymous';
-  await audio.useMediaElement(audioEl);
-  await audioEl.play();
-  playing = true;
-  playBtn.textContent = '⏸';
-}
-
-playBtn.addEventListener('click', async () => {
-  if (!audioEl) return;
-  if (audioEl.paused) { await audio.resume(); await audioEl.play(); playBtn.textContent = '⏸'; }
-  else { audioEl.pause(); playBtn.textContent = '▶︎'; }
+monitorVolumeSlider.addEventListener('input', (e) => {
+  audio.setMonitorVolume(e.target.value / 100);
 });
+
+
 
 document.getElementById('quit').addEventListener('click', () => window.mascot.quit());
 

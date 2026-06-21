@@ -25,8 +25,9 @@
       top: 8px;
       left: 8px;
       display: flex;
+      flex-direction: column;
       gap: 6px;
-      align-items: center;
+      align-items: flex-start;
       padding: 6px 8px;
       background: rgba(20, 20, 28, 0.35);
       border-radius: 10px;
@@ -71,14 +72,24 @@
   <div id="stage"></div>
 
   <div id="panel">
-    <select id="source" title="音源を選択">
-      <option value="">— 音源を選択 —</option>
-      <option value="file">🎵 mp3ファイル…</option>
-    </select>
-    <button id="play" title="再生/停止">▶︎</button>
-    <button id="toggleGraph" title="グラフ表示切替">📈</button>
-    <button id="quit" title="終了">✕</button>
-    <input id="file" type="file" accept="audio/*" />
+    <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
+      <select id="source" title="入力音源を選択" style="flex: 1;">
+        <option value="">— 入力音源を選択 —</option>
+        <option value="system">🖥 システム音声 (Mac 13.0+)</option>
+      </select>
+      <button id="toggleGraph" title="グラフ表示切替">📈</button>
+      <button id="quit" title="終了">✕</button>
+    </div>
+    <div style="display: flex; gap: 6px; align-items: center; width: 100%;">
+      <select id="outputSel" title="出力先を選択" style="flex: 1;">
+        <option value="">— 出力先を選択 —</option>
+      </select>
+      <label style="display: flex; align-items: center; gap: 4px; padding: 2px 6px;" title="入力音をスピーカーから出力する">
+        <input type="checkbox" id="passthrough" style="margin: 0; cursor: pointer;">
+        モニター
+        <input type="range" id="monitorVolume" min="0" max="1000" value="100" style="width: 50px; margin: 0; cursor: pointer;" title="モニター音量">
+      </label>
+    </div>
   </div>
 
   <div id="graphContainer">

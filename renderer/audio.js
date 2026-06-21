@@ -12,6 +12,9 @@ export class AudioEngine {
   constructor() {
     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     this.analyser = this.ctx.createAnalyser();
+    this.passthroughGain = this.ctx.createGain();
+    this.passthroughGain.connect(this.ctx.destination);
+    this.passthroughGain.gain.value = 0; // デフォルトはオフ
     this.analyser.fftSize = 1024;
     this.analyser.smoothingTimeConstant = 0.75;
     this.freq = new Uint8Array(this.analyser.frequencyBinCount);
@@ -60,14 +63,13 @@ export class AudioEngine {
 
   /**
    * 音源を接続する。
-   * @param node  AudioNode（MediaElementSource か MediaStreamSource）
-   * @param playThrough  true ならスピーカーへも出力（mp3再生時。デバイス取込時は false でエコー回避）
+   * @param node  AudioNode（MediaStreamSource）
    */
-  _connect(node, playThrough) {
+  _connect(node) {
     this._disconnectSource();
     this.source = node;
     node.connect(this.analyser);
-    if (playThrough) node.connect(this.ctx.destination);
+    node.connect(this.passthroughGain);
 
     // Meyda で滑らかな RMS を取得
     try {
@@ -90,22 +92,56 @@ export class AudioEngine {
     }
   }
 
-  /** mp3 等のメディア要素を音源にする（再生音はスピーカーへも流す） */
-  async useMediaElement(audioEl) {
-    await this.resume();
-    const node = this.ctx.createMediaElementSource(audioEl);
-    this._connect(node, true);
+  /** モニター出力（LadioCast的なパススルー）のオンオフ */
+  setPassthrough(enabled) {
+    this.isPassthroughEnabled = enabled;
+    this._updatePassthroughGain();
+  }
+
+  /** モニター出力の音量設定 (0.0 〜 ) */
+  setMonitorVolume(volume) {
+    this.monitorVolume = volume;
+    this._updatePassthroughGain();
+  }
+
+  _updatePassthroughGain() {
+    this.passthroughGain.gain.value = this.isPassthroughEnabled ? (this.monitorVolume !== undefined ? this.monitorVolume : 1.0) : 0;
+  }
+
+  /** 出力デバイス一覧を取得 */
+  static async listOutputDevices() {
+    try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch {}
+    const all = await navigator.mediaDevices.enumerateDevices();
+    return all.filter((d) => d.kind === 'audiooutput');
+  }
+
+  /** 出力デバイスを変更する (AudioContext.setSinkId) */
+  async setOutputDevice(deviceId) {
+    if (typeof this.ctx.setSinkId === 'function') {
+      try {
+        await this.ctx.setSinkId(deviceId || '');
+      } catch (e) {
+        console.warn('出力デバイスの変更に失敗しました:', e);
+      }
+    } else {
+      console.warn('setSinkId がサポートされていないブラウザです');
+    }
   }
 
   /** 入力デバイス（BlackHole/マイク）を音源にする */
   async useInputDevice(deviceId) {
     await this.resume();
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+      audio: {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      },
       video: false
     });
     const node = this.ctx.createMediaStreamSource(stream);
-    this._connect(node, false);   // 取り込み音はスピーカーへ流さない
+    this._connect(node);
     return stream;
   }
 
@@ -115,6 +151,28 @@ export class AudioEngine {
     try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch {}
     const all = await navigator.mediaDevices.enumerateDevices();
     return all.filter((d) => d.kind === 'audioinput');
+  }
+
+  /** ScreenCaptureKit を利用したシステム音声キャプチャ */
+  async useSystemAudio() {
+    await this.resume();
+    // main.js の setDisplayMediaRequestHandler が呼ばれ、画面+システム音声が返る
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      },
+      video: true
+    });
+    
+    // 映像トラックは不要なので無効化（ただしトラック自体をstopすると音声も止まるブラウザ挙動があるため保持しつつ無効化）
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack) videoTrack.enabled = false;
+
+    const node = this.ctx.createMediaStreamSource(stream);
+    this._connect(node); // デバイス入力と同様、スピーカーへパススルー可能にする
+    return stream;
   }
 
   /** 自己相関関数を用いて近似的な基本周波数（ピッチ）を推定する */
